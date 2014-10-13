@@ -3,6 +3,8 @@
 
 module Legate.Options where
 
+import           Control.Monad.Reader
+import           Data.Text (Text)
 import qualified Data.Text as T
 import           Network.Consul.Http
 import           Network.Consul.Types
@@ -39,8 +41,8 @@ consulPath (GlobalOpts host port ssl) = scheme ++ host ++ ":" ++ show port
   where scheme | ssl       = "https://"
                | otherwise = "http://"
 
-text :: Monad m => String -> m T.Text
-text = return . T.pack
+text :: ReadM Text
+text = T.pack <$> str
 
 registrator :: Parser a -> Parser (Register a)
 registrator p = Register <$> p

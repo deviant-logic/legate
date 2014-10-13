@@ -17,7 +17,7 @@ executable legate
                        bytestring,
                        lens,
                        mtl,
-                       optparse-applicative,
+                       optparse-applicative >= 0.11,
                        process,
                        text,
                        unordered-containers,
