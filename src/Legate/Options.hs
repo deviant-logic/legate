@@ -70,9 +70,12 @@ chkParser = TTL    <$> option text ttl <*> optional (option text notes)
 
 type Command a = (CommandOpts a -> IO ()) -> Mod CommandFields (IO ())
 
+commander :: String -> String -> Parser a -> Command a
+commander cmd desc p f = command cmd (info (helper <*> fmap f (commandOptsParser p))
+                                      (progDesc desc))
+
 svcCommand :: Command (Register Service)
-svcCommand f = command "service" (info (helper <*> fmap f (commandOptsParser $ registrator svcParser))
-                                  (progDesc "register or deregister a service"))
+svcCommand = commander "service" "register or deregister a service" (registrator svcParser)
 
 data Exec = Exec Service String
 
@@ -81,5 +84,4 @@ exParser = Exec <$> svcParser <*> strOption cmd
   where cmd = long "command" <> short 'e' <> help "command to run"
 
 execCommand :: Command Exec
-execCommand f = command "exec" (info (helper <*> fmap f (commandOptsParser exParser))
-                                (progDesc "run a command wrapped in service registration"))
+execCommand = commander "exec" "run a command wrapped in service registration" exParser
