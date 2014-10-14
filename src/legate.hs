@@ -18,9 +18,9 @@ main = join $ execParser (info (helper <*> subparser commands)
           
 
 commands :: Mod CommandFields (IO ())
-commands = mconcat [execCommand exec, svcCommand register]
+commands = mconcat [execCommand exec, svcCommand register, checkCommand check]
 
-withServiceCommand :: String -> Service -> String -> IO ()
+withServiceCommand :: String -> Register Service -> String -> IO ()
 withServiceCommand url svc = withService url svc . callCommand
 
 exec :: CommandOpts Exec -> IO ()
@@ -29,3 +29,6 @@ exec CommandOpts {..} = withServiceCommand (consulPath _globalOpts) svc cmd
 
 register :: CommandOpts (Register Service) -> IO ()
 register CommandOpts {..} = registerService (consulPath _globalOpts) _commandOpts
+
+check :: CommandOpts (Register Check) -> IO ()
+check CommandOpts {..} = registerCheck (consulPath _globalOpts) _commandOpts

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 
 module Network.Consul.Http where
@@ -8,22 +9,22 @@ import           Control.Lens
 import           Control.Monad (void)
 import           Data.Aeson
 import           Data.ByteString.Lazy (ByteString)
+import           Data.Maybe
 import qualified Data.Text as T
 import           Network.Consul.Types
 import           Network.Wreq
 
 
-data Register a = Register a | DeRegister String
-                  deriving (Eq, Ord, Show)
-
 registerService :: String -> Register Service -> IO ()
-registerService url (Register svc) = void $ put (url ++ "/v1/agent/service/register") $ encode svc
+registerService url r@Register {..} = void $ put (url ++ "/v1/agent/service/register") $ encode r
 registerService url (DeRegister name) = void $ get (url ++ "/v1/agent/service/deregister/" ++ name) 
 
-withService :: String -> Service -> IO a -> IO a
-withService url s io = bracket_ (registerService url $ Register s)
-                                (registerService url . DeRegister . T.unpack $
-                                                 (case _svcId s of
-                                                   Nothing -> _svcName s
-                                                   Just sid -> sid))
-                                io
+registerCheck :: String -> Register Check -> IO ()
+registerCheck url r@Register {..} = void $ put (url ++ "/v1/agent/check/register") $ encode r
+registerCheck url (DeRegister name) = void $ get (url ++ "/v1/agent/check/deregister/" ++ name) 
+
+withService :: String -> Register Service -> IO a -> IO a
+withService url s@Register {..} io =
+    bracket_ (registerService url s)
+             (registerService url . DeRegister $ fromMaybe _regName _regId)
+             io

@@ -4,16 +4,14 @@
 
 module Network.Consul.Types where
 
-import           Control.Applicative
-import           Control.Monad.Writer
-import           Data.Aeson
--- import qualified Data.ByteString.Lazy.Char8 as BL
-import           Data.Text (Text)
-import           Network.Consul.Util
+import Control.Applicative
+import Control.Monad.Writer
+import Data.Aeson
+import Data.Maybe
+import Data.Text (Text)
+import Network.Consul.Util
 
 data Service = Service {
-      _svcId   :: Maybe Text,
-      _svcName :: Text,
       _svcTags :: [Text],
       _svcPort :: Int,
       _svcCheck :: Maybe Check
@@ -30,22 +28,39 @@ data Check = Script {
 
 -- TODO: Do better than Text for Duration
 type Duration = Text
-    
+
+data Register a = Register {
+      _regName :: String,
+      _regId   :: Maybe String,
+      _regThing :: a
+    } | DeRegister {
+      _regName :: String
+} deriving (Eq, Ord, Show)
+
+instance FromJSON a => FromJSON (Register a) where
+    parseJSON (caseFoldKeys -> Object o) =
+        do _regName <- o .: "name"
+           _regId   <- o .:? "id"
+           _regThing <- parseJSON (Object o)
+           return Register {..}
+
+instance ToJSON a => ToJSON (Register a) where
+    toJSON Register {..} = Object $ o <> o'
+        where (Object o)  = object $ ("name" .= _regName : idOrNot)
+              (Object o') = toJSON _regThing
+              idOrNot = maybeToList . fmap (".id".=) $ _regId
+
 instance FromJSON Service where
     parseJSON (caseFoldKeys -> Object o) =
-        do _svcName  <- o .:  "name"
-           _svcId    <- o .:? "id"
-           _svcTags  <- o .:? "tags" .!= []
+        do _svcTags  <- o .:? "tags" .!= []
            _svcPort  <- o .:? "port" .!= 0
            _svcCheck <- o .:? "check"
            return Service {..}
 
 instance ToJSON Service where
     toJSON Service {..} = object . execWriter $
-        do tell ["name" .= _svcName,
-                 "port" .= _svcPort,
+        do tell ["port" .= _svcPort,
                  "tags" .= _svcTags]
-           tell $ maybe [] ((:[]) . ("id" .=))    _svcId
            tell $ maybe [] ((:[]) . ("check" .=)) _svcCheck
 
 instance FromJSON Check where

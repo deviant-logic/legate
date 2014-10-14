@@ -44,19 +44,19 @@ consulPath (GlobalOpts host port ssl) = scheme ++ host ++ ":" ++ show port
 text :: ReadM Text
 text = T.pack <$> str
 
-registrator :: Parser a -> Parser (Register a)
-registrator p = Register <$> p
-                <|> DeRegister <$> strOption mods
-  where mods = short 'd' <> help "name to deregister"
+registrator :: String -> Parser a -> Parser (Register a)
+registrator thing p = Register <$> strOption name <*> optional (strOption thingid) <*> p
+                      <|> DeRegister <$> strOption dereg
+  where dereg = short 'd' <> help "name to deregister"
+        thingid = long "id"   <> short 'i'
+                  <> help ("identifier for this " ++ thing ++ ", if different from name")
+        name    = long "name" <> short 'n' <> help ("name for this " ++ "thing")
 
 svcParser :: Parser Service
-svcParser = Service <$> optional (option text svcid)
-                    <*> option text name
-                    <*> many (option text tag)
+svcParser = Service <$> many (option text tag)
                     <*> option auto port
                     <*> optional chkParser
-  where svcid = long "id"   <> short 'i' <> help "identifier for this service, if different from name"
-        name  = long "name" <> short 'n' <> help "name for this service"
+  where
         tag   = long "tag"  <> short 't' <> help "tags for this service on this node"
         port  = long "port" <> short 'p' <> value 0 <> showDefault <> help "port this service runs on"
 
@@ -77,13 +77,16 @@ commander cmd desc p f = command cmd (info (helper <*> fmap f (commandOptsParser
                                       (progDesc desc))
 
 svcCommand :: Command (Register Service)
-svcCommand = commander "service" "register or deregister a service" (registrator svcParser)
+svcCommand = commander "service" "register or deregister a service" $ registrator "service" svcParser
 
-data Exec = Exec Service String
+data Exec = Exec (Register Service) String
 
 exParser :: Parser Exec
-exParser = Exec <$> svcParser <*> strOption cmd
+exParser = Exec <$> registrator "service" svcParser <*> strOption cmd
   where cmd = long "command" <> short 'e' <> help "command to run"
 
 execCommand :: Command Exec
 execCommand = commander "exec" "run a command wrapped in service registration" exParser
+
+checkCommand :: Command (Register Check)
+checkCommand = commander "check" "register or deregister a check" $ registrator "check" chkParser
