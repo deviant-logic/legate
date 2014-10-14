@@ -7,6 +7,7 @@ module Network.Consul.Types where
 import Control.Applicative
 import Control.Monad.Writer
 import Data.Aeson
+import Data.ByteString.Lazy (ByteString)
 import Data.Maybe
 import Data.Text (Text)
 import Network.Consul.Util
@@ -21,7 +22,7 @@ data Check = Script {
       _chkScript :: Text,
       _chkInterval :: Duration,
       _chkNotes :: Maybe Text
-} | TTL {
+}          | TTL {
       _chkTTL :: Duration,
       _chkNotes :: Maybe Text
 } deriving (Eq, Ord, Show)
@@ -30,11 +31,11 @@ data Check = Script {
 type Duration = Text
 
 data Register a = Register {
-      _regName :: String,
-      _regId   :: Maybe String,
+      _regName  :: String,
+      _regId    :: Maybe String,
       _regThing :: a
-    } | DeRegister {
-      _regName :: String
+}               | DeRegister {
+      _regName  :: String
 } deriving (Eq, Ord, Show)
 
 instance FromJSON a => FromJSON (Register a) where
@@ -48,7 +49,7 @@ instance ToJSON a => ToJSON (Register a) where
     toJSON Register {..} = Object $ o <> o'
         where (Object o)  = object $ ("name" .= _regName : idOrNot)
               (Object o') = toJSON _regThing
-              idOrNot = maybeToList . fmap (".id".=) $ _regId
+              idOrNot = maybeToList . fmap ("id".=) $ _regId
 
 instance FromJSON Service where
     parseJSON (caseFoldKeys -> Object o) =
@@ -80,3 +81,6 @@ instance ToJSON Check where
                                  "interval" .= _chkInterval]
              TTL {..}    -> tell ["ttl"      .= _chkTTL]
            tell $ maybe [] ((:[]) . ("notes" .=)) $ _chkNotes chk
+
+data KV = GetKey String | DelKey String | PutKey String ByteString
+

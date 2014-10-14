@@ -4,6 +4,7 @@
 module Main where
 
 import           Control.Monad (join)
+import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Monoid
 import           Network.Consul.Http
 import           Network.Consul.Types
@@ -18,7 +19,10 @@ main = join $ execParser (info (helper <*> subparser commands)
           
 
 commands :: Mod CommandFields (IO ())
-commands = mconcat [execCommand exec, svcCommand register, checkCommand check]
+commands = mconcat [execCommand exec,
+                    svcCommand register,
+                    checkCommand check,
+                    kvCommand kvcmd]
 
 withServiceCommand :: String -> Register Service -> String -> IO ()
 withServiceCommand url svc = withService url svc . callCommand
@@ -32,3 +36,6 @@ register CommandOpts {..} = registerService (consulPath _globalOpts) _commandOpt
 
 check :: CommandOpts (Register Check) -> IO ()
 check CommandOpts {..} = registerCheck (consulPath _globalOpts) _commandOpts
+
+kvcmd :: CommandOpts KV -> IO ()
+kvcmd CommandOpts {..} = BL.putStr =<< kv (consulPath _globalOpts) _commandOpts

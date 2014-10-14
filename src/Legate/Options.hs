@@ -4,8 +4,8 @@
 module Legate.Options where
 
 import           Control.Monad.Reader
-import           Data.Text (Text)
-import qualified Data.Text as T
+import           Data.ByteString.Lazy.Char8 (ByteString)
+import           Data.String
 import           Network.Consul.Http
 import           Network.Consul.Types
 import           Options.Applicative
@@ -41,8 +41,10 @@ consulPath (GlobalOpts host port ssl) = scheme ++ host ++ ":" ++ show port
   where scheme | ssl       = "https://"
                | otherwise = "http://"
 
-text :: ReadM Text
-text = T.pack <$> str
+
+fstr :: IsString a => ReadM a
+fstr = fromString <$> str
+
 
 registrator :: String -> Parser a -> Parser (Register a)
 registrator thing p = Register <$> strOption name <*> optional (strOption thingid) <*> p
@@ -53,7 +55,7 @@ registrator thing p = Register <$> strOption name <*> optional (strOption thingi
         name    = long "name" <> short 'n' <> help ("name for this " ++ "thing")
 
 svcParser :: Parser Service
-svcParser = Service <$> many (option text tag)
+svcParser = Service <$> many (option fstr tag)
                     <*> option auto port
                     <*> optional chkParser
   where
@@ -61,9 +63,9 @@ svcParser = Service <$> many (option text tag)
         port  = long "port" <> short 'p' <> value 0 <> showDefault <> help "port this service runs on"
 
 chkParser :: Parser Check
-chkParser = TTL    <$> option text ttl <*> optional (option text notes)
+chkParser = TTL    <$> option fstr ttl <*> optional (option fstr notes)
             <|>
-            Script <$> option text script <*> option text interval <*> optional (option text notes)
+            Script <$> option fstr script <*> option fstr interval <*> optional (option fstr notes)
   where ttl      = long "ttl" <> help "time to live check duration"
         notes    = long "notes" <> help "human readable description of this check"
         script   = long "script" <> short 's' <> help "script to run for this check"
@@ -90,3 +92,15 @@ execCommand = commander "exec" "run a command wrapped in service registration" e
 
 checkCommand :: Command (Register Check)
 checkCommand = commander "check" "register or deregister a check" $ registrator "check" chkParser
+
+kvParser :: Parser KV
+kvParser = GetKey     <$> strArgument key
+           <|> PutKey <$> strOption set <*> option fstr val
+           <|> DelKey <$> strOption   del
+  where key = metavar "KEY" <> help "key to get"
+        set = long "key"    <> short 'k' <> metavar "KEY" <> help "key to set"
+        val = long "set"    <> short 's' <> metavar "VALUE" <> help "value to set"
+        del = long "delete" <> short 'd' <> metavar "KEY"   <> help "key to delete"
+
+kvCommand :: Command KV
+kvCommand = commander "kv" "get or set values in the key/value store" kvParser

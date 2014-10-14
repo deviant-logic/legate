@@ -10,6 +10,7 @@ import           Control.Monad (void)
 import           Data.Aeson
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Maybe
+import           Data.Monoid
 import qualified Data.Text as T
 import           Network.Consul.Types
 import           Network.Wreq
@@ -28,3 +29,12 @@ withService url s@Register {..} io =
     bracket_ (registerService url s)
              (registerService url . DeRegister $ fromMaybe _regName _regId)
              io
+
+kv :: String -> KV -> IO ByteString
+kv url thing = do resp <- case thing of
+                           GetKey key -> get (url' key <> "?raw")
+                           PutKey key val -> put (url' key) val
+                           DelKey key -> delete (url' key) >>= return . fmap (const "")
+                  return $ resp ^. responseBody <> "\n"
+    where opts = defaults & param "raw" .~ []
+          url' key = url ++ "/v1/kv/" ++ key
