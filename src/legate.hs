@@ -24,12 +24,12 @@ commands = mconcat [execCommand exec,
                     checkCommand check,
                     kvCommand kvcmd]
 
-withServiceCommand :: String -> Register Service -> String -> IO ()
-withServiceCommand url svc = withService url svc . callCommand
+withServiceCommand :: String -> Register Service -> FilePath -> [String] -> IO ()
+withServiceCommand url svc cmd = withService url svc . callProcess cmd
 
 exec :: CommandOpts Exec -> IO ()
-exec CommandOpts {..} = withServiceCommand (consulPath _globalOpts) svc cmd
-  where (Exec svc cmd) = _commandOpts
+exec CommandOpts {..} = withServiceCommand (consulPath _globalOpts) svc cmd args
+  where (Exec svc cmd args) = _commandOpts
 
 register :: CommandOpts (Register Service) -> IO ()
 register CommandOpts {..} = registerService (consulPath _globalOpts) _commandOpts

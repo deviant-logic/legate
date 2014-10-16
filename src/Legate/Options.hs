@@ -52,25 +52,34 @@ registrator thing p = Register <$> strOption name <*> optional (strOption thingi
   where dereg = short 'd' <> help "name to deregister"
         thingid = long "id"   <> short 'i'
                   <> help ("identifier for this " ++ thing ++ ", if different from name")
+                  <> metavar "ID"
         name    = long "name" <> short 'n' <> help ("name for this " ++ "thing")
+                  <> metavar "NAME"
 
 svcParser :: Parser Service
 svcParser = Service <$> many (option fstr tag)
                     <*> option auto port
                     <*> optional chkParser
-  where
-        tag   = long "tag"  <> short 't' <> help "tags for this service on this node"
-        port  = long "port" <> short 'p' <> value 0 <> showDefault <> help "port this service runs on"
+  where tag   = long "tag"  <> short 't'
+                <> metavar "TAG" <> help "tags for this service on this node"
+        port  = long "port" <> short 'p' <> value 0
+                <> showDefault <> help "port this service runs on"
+                <> metavar "PORT"
 
 chkParser :: Parser Check
 chkParser = TTL    <$> option fstr ttl <*> optional (option fstr notes)
-            <|>
-            Script <$> option fstr script <*> option fstr interval <*> optional (option fstr notes)
+            <|> Script <$> option fstr script
+                       <*> option fstr interval
+                       <*> optional (option fstr notes)
   where ttl      = long "ttl" <> help "time to live check duration"
+                   <> metavar "DURATION"
         notes    = long "notes" <> help "human readable description of this check"
+                   <> metavar "NOTES"
         script   = long "script" <> short 's' <> help "script to run for this check"
-        interval = long "interval" <> value "10s" <> help "check interval for this script check"
-                   <> showDefault
+                   <> metavar "COMMAND"
+        interval = long "interval" <> value "10s"
+                   <> help "check interval for this script check"
+                   <> showDefault <> metavar "DURATION"
 
 type Command a = (CommandOpts a -> IO ()) -> Mod CommandFields (IO ())
 
@@ -79,26 +88,31 @@ commander cmd desc p f = command cmd (info (helper <*> fmap f (commandOptsParser
                                       (progDesc desc))
 
 svcCommand :: Command (Register Service)
-svcCommand = commander "service" "register or deregister a service" $ registrator "service" svcParser
+svcCommand = commander "service" "register or deregister a service"
+                     $ registrator "service" svcParser
 
-data Exec = Exec (Register Service) String
+data Exec = Exec (Register Service) FilePath [String]
 
 exParser :: Parser Exec
-exParser = Exec <$> registrator "service" svcParser <*> strOption cmd
-  where cmd = long "command" <> short 'e' <> help "command to run"
+exParser = Exec <$> registrator "service" svcParser
+                <*> strArgument cmd
+                <*> many (strArgument arg)
+  where cmd = help "command to run"   <> metavar "COMMAND"
+        arg = help "command argument" <> metavar "ARGS"
 
 execCommand :: Command Exec
 execCommand = commander "exec" "run a command wrapped in service registration" exParser
 
 checkCommand :: Command (Register Check)
-checkCommand = commander "check" "register or deregister a check" $ registrator "check" chkParser
+checkCommand = commander "check" "register or deregister a check"
+                       $ registrator "check" chkParser
 
 kvParser :: Parser KV
 kvParser = GetKey     <$> strArgument key
            <|> PutKey <$> strOption set <*> option fstr val
            <|> DelKey <$> strOption   del
   where key = metavar "KEY" <> help "key to get"
-        set = long "key"    <> short 'k' <> metavar "KEY" <> help "key to set"
+        set = long "key"    <> short 'k' <> metavar "KEY"   <> help "key to set"
         val = long "set"    <> short 's' <> metavar "VALUE" <> help "value to set"
         del = long "delete" <> short 'd' <> metavar "KEY"   <> help "key to delete"
 
