@@ -32,9 +32,9 @@ withService url s@Register {..} io =
 
 kv :: String -> KV -> IO ByteString
 kv url thing = do resp <- case thing of
-                           GetKey key -> get (url' key <> "?raw")
+                           GetKey key -> getWith opts (url' key)
                            PutKey key val -> put (url' key) val
                            DelKey key -> delete (url' key) >>= return . fmap (const "")
                   return $ resp ^. responseBody <> "\n"
-    where opts = defaults & param "raw" .~ []
+    where opts = defaults & param "raw" .~ [""]
           url' key = url ++ "/v1/kv/" ++ key
