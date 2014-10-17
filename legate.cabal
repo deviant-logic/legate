@@ -18,6 +18,7 @@ executable legate
                        lens,
                        mtl,
                        optparse-applicative >= 0.11,
+                       posix-escape,
                        process,
                        text,
                        unordered-containers,

@@ -87,6 +87,11 @@ commander :: String -> String -> Parser a -> Command a
 commander cmd desc p f = command cmd (info (helper <*> fmap f (commandOptsParser p))
                                       (progDesc desc))
 
+helpCommand :: (String -> IO ()) -> Mod CommandFields (IO ())
+helpCommand f = command "help" (info (helper <*> (f <$> p))
+                                (progDesc "get help for a command"))
+  where p = strArgument $ metavar "COMMAND"
+
 svcCommand :: Command (Register Service)
 svcCommand = commander "service" "register or deregister a service"
                      $ registrator "service" svcParser
@@ -111,10 +116,10 @@ kvParser :: Parser KV
 kvParser = GetKey     <$> strArgument key
            <|> PutKey <$> strOption set <*> option fstr val
            <|> DelKey <$> strOption   del
-  where key = metavar "KEY" <> help "key to get"
+  where key =                               metavar "KEY"   <> help "key to get"
         set = long "key"    <> short 'k' <> metavar "KEY"   <> help "key to set"
-        val = long "set"    <> short 's' <> metavar "VALUE" <> help "value to set"
         del = long "delete" <> short 'd' <> metavar "KEY"   <> help "key to delete"
+        val = long "set"    <> short 's' <> metavar "VALUE" <> help "value to set"
 
 kvCommand :: Command KV
 kvCommand = commander "kv" "get or set values in the key/value store" kvParser

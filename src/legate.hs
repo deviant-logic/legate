@@ -9,6 +9,7 @@ import           Data.Monoid
 import           Network.Consul.Http
 import           Network.Consul.Types
 import           Options.Applicative
+import           System.Environment (withArgs)
 import           System.Process
 
 import           Legate.Options
@@ -22,10 +23,14 @@ commands :: Mod CommandFields (IO ())
 commands = mconcat [execCommand exec,
                     svcCommand register,
                     checkCommand check,
-                    kvCommand kvcmd]
+                    kvCommand kvcmd,
+                    helpCommand helpcmd]
 
 withServiceCommand :: String -> Register Service -> FilePath -> [String] -> IO ()
 withServiceCommand url svc cmd = withService url svc . callProcess cmd
+
+helpcmd :: String -> IO ()
+helpcmd cmd = withArgs [cmd, "--help"] main
 
 exec :: CommandOpts Exec -> IO ()
 exec CommandOpts {..} = withServiceCommand (consulPath _globalOpts) svc cmd args
