@@ -59,12 +59,15 @@ registrator thing p = Register <$> strOption name <*> optional (strOption thingi
 svcParser :: Parser Service
 svcParser = Service <$> many (option fstr tag)
                     <*> option auto port
+                    <*> optional (strOption address)
                     <*> optional chkParser
-  where tag   = long "tag"  <> short 't'
-                <> metavar "TAG" <> help "tags for this service on this node"
-        port  = long "port" <> short 'p' <> value 0
-                <> showDefault <> help "port this service runs on"
-                <> metavar "PORT"
+  where tag     = long "tag"  <> short 't'
+                  <> metavar "TAG" <> help "tags for this service on this node"
+        port    = long "port" <> short 'p' <> value 0
+                  <> showDefault <> help "port this service runs on"
+                  <> metavar "PORT"
+        address = long "address" <> short 'a'
+                  <> metavar "ADDRESS" <> help "specify a service-specific address"
 
 chkParser :: Parser Check
 chkParser = TTL    <$> option fstr ttl <*> optional (option fstr notes)
