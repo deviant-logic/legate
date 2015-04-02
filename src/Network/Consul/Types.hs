@@ -15,6 +15,7 @@ import Network.Consul.Util
 data Service = Service {
       _svcTags :: [Text],
       _svcPort :: Int,
+      _svcAddress :: Maybe String,
       _svcCheck :: Maybe Check
 } deriving (Eq, Ord, Show)
 
@@ -53,15 +54,17 @@ instance ToJSON a => ToJSON (Register a) where
 
 instance FromJSON Service where
     parseJSON (caseFoldKeys -> Object o) =
-        do _svcTags  <- o .:? "tags" .!= []
-           _svcPort  <- o .:? "port" .!= 0
-           _svcCheck <- o .:? "check"
+        do _svcTags    <- o .:? "tags" .!= []
+           _svcPort    <- o .:? "port" .!= 0
+           _svcAddress <- o .:? "address"
+           _svcCheck   <- o .:? "check"
            return Service {..}
 
 instance ToJSON Service where
     toJSON Service {..} = object . execWriter $
         do tell ["port" .= _svcPort,
                  "tags" .= _svcTags]
+           tell $ maybe [] ((:[]) . ("address" .=)) _svcAddress
            tell $ maybe [] ((:[]) . ("check" .=)) _svcCheck
 
 instance FromJSON Check where
