@@ -14,6 +14,8 @@ import           Data.Monoid
 import qualified Data.Text as T
 import           Network.Consul.Types
 import           Network.Wreq
+import           System.IO
+import           System.Posix.Signals
 
 
 registerService :: String -> Register Service -> IO ()
@@ -27,8 +29,12 @@ registerCheck url (DeRegister name) = void $ get (url ++ "/v1/agent/check/deregi
 withService :: String -> Register Service -> IO a -> IO a
 withService url s@Register {..} io =
     bracket_ (registerService url s)
-             (registerService url . DeRegister $ fromMaybe _regName _regId)
-             io
+             (deregisterService)
+             (installHandler sigTERM (Catch deregisterService) Nothing >> io)
+  where
+    deregisterService = do
+        putStrLn "Deregistering service..."
+        registerService url . DeRegister $ fromMaybe _regName _regId
 
 kv :: String -> KV -> IO ByteString
 kv url thing = do resp <- case thing of
