@@ -33,7 +33,7 @@ makeUnixSocketConnection path chunkSize = bracketOnError
 makeUrl :: ConsulPath -> String
 makeUrl (HttpPath p)  = "http://" ++ p
 makeUrl (HttpsPath p) = "https://" ++ p
-makeUrl (UnixPath p)  = ""
+makeUrl (UnixPath p)  = "http://localhost:0"
 
 makeOpts :: ConsulPath -> Options
 makeOpts (UnixPath p) = defaults & manager .~ Left (defaultManagerSettings {  managerRawConnection = return $ \_ _ _ -> makeUnixSocketConnection p 4096 })
