@@ -11,11 +11,14 @@ import           Network.Consul.Types
 import           Options.Applicative
 import           System.Environment (withArgs)
 import           System.Process
+import           System.Posix.Signals
 
 import           Legate.Options
 
 main :: IO ()
-main = join $ execParser (info (helper <*> subparser commands)
+main = do
+    installHandler sigTERM (CatchInfo $ error . show . siginfoSignal) Nothing
+    join $ execParser (info (helper <*> subparser commands)
                           (fullDesc <> progDesc "interact with consul") )
           
 

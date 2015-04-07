@@ -22,5 +22,5 @@ executable legate
                        process,
                        text,
                        unordered-containers,
-                       unix,
+                       unix >= 2.7.0.0,
                        wreq
