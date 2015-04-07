@@ -26,7 +26,7 @@ commands = mconcat [execCommand exec,
                     kvCommand kvcmd,
                     helpCommand helpcmd]
 
-withServiceCommand :: String -> Register Service -> FilePath -> [String] -> IO ()
+withServiceCommand :: ConsulPath -> Register Service -> FilePath -> [String] -> IO ()
 withServiceCommand url svc cmd = withService url svc . callProcess cmd
 
 helpcmd :: String -> IO ()
