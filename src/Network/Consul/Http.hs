@@ -9,12 +9,13 @@ import           Control.Lens
 import           Control.Monad (void)
 import           Data.Aeson
 import           Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Char8 as BS
 import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text as T
 import           Network.Consul.Types
-import           Network.HTTP.Client (defaultManagerSettings, managerRawConnection)
-import           Network.HTTP.Client.Internal (Connection, makeConnection, noProxy, managerProxySecure, managerProxyInsecure)
+import           Network.HTTP.Client (defaultManagerSettings, managerRawConnection, host)
+import           Network.HTTP.Client.Internal (Connection, makeConnection, noProxy, managerProxySecure, managerProxyInsecure, managerModifyRequest)
 import           Network.Socket
 import qualified Network.Socket.ByteString as NBS
 import           Network.Wreq
@@ -36,12 +37,14 @@ makeUnixSocketConnection path chunkSize = bracketOnError
 makeUrl :: ConsulPath -> String
 makeUrl (HttpPath p)  = "http://" ++ p
 makeUrl (HttpsPath p) = "https://" ++ p
-makeUrl (UnixPath p)  = "http://localhost:0"
+makeUrl (UnixPath _)  = "http://localhost:0"
 
 makeOpts :: ConsulPath -> Options
 makeOpts (UnixPath p) = defaults & manager .~ Left (defaultManagerSettings { managerRawConnection = return $ \_ _ _ -> makeUnixSocketConnection p 4096 
                                                                            , managerProxyInsecure = noProxy
-                                                                           , managerProxySecure   = noProxy})
+                                                                           , managerProxySecure   = noProxy
+                                                                           , managerModifyRequest = \r -> return $ r { host = BS.pack p }
+                                                                           })
 makeOpts _            = defaults
 
 registerService :: NWS.Session -> ConsulPath -> Register Service -> IO ()

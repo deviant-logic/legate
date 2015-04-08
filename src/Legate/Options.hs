@@ -22,7 +22,7 @@ data GlobalOpts = GlobalOpts {
   _consulHost :: String,
   _consulPort :: Int,
   _consulSSL  :: Bool,
-  _unixSocket :: Maybe String
+  _unixSocket :: Maybe FilePath
 }
 
 defaultOpts :: GlobalOpts
