@@ -8,6 +8,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Monoid
 import           Network.Consul.Http
 import           Network.Consul.Types
+import           Network.Wreq.Session
 import           Options.Applicative
 import           System.Environment (withArgs)
 import           System.Process
@@ -27,7 +28,7 @@ commands = mconcat [execCommand exec,
                     helpCommand helpcmd]
 
 withServiceCommand :: ConsulPath -> Register Service -> FilePath -> [String] -> IO ()
-withServiceCommand url svc cmd = withService url svc . callProcess cmd
+withServiceCommand url svc cmd args = withSession $ \s -> withService s url svc $ callProcess cmd args
 
 helpcmd :: String -> IO ()
 helpcmd cmd = withArgs [cmd, "--help"] main
@@ -37,10 +38,10 @@ exec CommandOpts {..} = withServiceCommand (consulPath _globalOpts) svc cmd args
   where (Exec svc cmd args) = _commandOpts
 
 register :: CommandOpts (Register Service) -> IO ()
-register CommandOpts {..} = registerService (consulPath _globalOpts) _commandOpts
+register CommandOpts {..} = withSession $ \s -> registerService s (consulPath _globalOpts) _commandOpts
 
 check :: CommandOpts (Register Check) -> IO ()
-check CommandOpts {..} = registerCheck (consulPath _globalOpts) _commandOpts
+check CommandOpts {..} = withSession $ \s -> registerCheck s (consulPath _globalOpts) _commandOpts
 
 kvcmd :: CommandOpts KV -> IO ()
-kvcmd CommandOpts {..} = BL.putStr =<< kv (consulPath _globalOpts) _commandOpts
+kvcmd CommandOpts {..} = BL.putStr =<< (withSession $ \s -> kv s (consulPath _globalOpts) _commandOpts)
