@@ -14,11 +14,13 @@ import           Data.Monoid
 import qualified Data.Text as T
 import           Network.Consul.Types
 import           Network.HTTP.Client (defaultManagerSettings, managerRawConnection)
-import           Network.HTTP.Client.Internal (Connection, makeConnection)
+import           Network.HTTP.Client.Internal (Connection, makeConnection, noProxy, managerProxySecure, managerProxyInsecure)
 import           Network.Socket
 import qualified Network.Socket.ByteString as NBS
 import           Network.Wreq
 import qualified Network.Wreq.Session as NWS
+
+import Debug.Trace
 
 makeUnixSocketConnection :: String -> Int -> IO Connection
 makeUnixSocketConnection path chunkSize = bracketOnError
@@ -37,7 +39,9 @@ makeUrl (HttpsPath p) = "https://" ++ p
 makeUrl (UnixPath p)  = "http://localhost:0"
 
 makeOpts :: ConsulPath -> Options
-makeOpts (UnixPath p) = defaults & manager .~ Left (defaultManagerSettings {  managerRawConnection = return $ \_ _ _ -> makeUnixSocketConnection p 4096 })
+makeOpts (UnixPath p) = defaults & manager .~ Left (defaultManagerSettings { managerRawConnection = return $ \_ _ _ -> makeUnixSocketConnection p 4096 
+                                                                           , managerProxyInsecure = noProxy
+                                                                           , managerProxySecure   = noProxy})
 makeOpts _            = defaults
 
 registerService :: NWS.Session -> ConsulPath -> Register Service -> IO ()
