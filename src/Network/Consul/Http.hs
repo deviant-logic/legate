@@ -37,23 +37,15 @@ makeUnixSocketConnection path chunkSize = bracketOnError
 makeUrl :: ConsulPath -> String
 makeUrl (HttpPath p)  = "http://" ++ p
 makeUrl (HttpsPath p) = "https://" ++ p
-makeUrl (UnixPath _)  = "http://localhost:0"
-
-makeOpts :: ConsulPath -> Options
-makeOpts (UnixPath p) = defaults & manager .~ Left (defaultManagerSettings { managerRawConnection = return $ \_ _ _ -> makeUnixSocketConnection p 4096 
-                                                                           , managerProxyInsecure = noProxy
-                                                                           , managerProxySecure   = noProxy
-                                                                           , managerModifyRequest = \r -> return $ r { host = BS.pack p }
-                                                                           })
-makeOpts _            = defaults
+makeUrl (UnixPath _)  = ""
 
 registerService :: NWS.Session -> ConsulPath -> Register Service -> IO ()
-registerService s cp r@Register {..} = void $ NWS.putWith (makeOpts cp) s ((makeUrl cp) ++ "/v1/agent/service/register") $ encode r
-registerService s cp (DeRegister name) = void $ NWS.getWith (makeOpts cp) s ((makeUrl cp) ++ "/v1/agent/service/deregister/" ++ name) 
+registerService s cp r@Register {..} = void $ NWS.put s ((makeUrl cp) ++ "/v1/agent/service/register") $ encode r
+registerService s cp (DeRegister name) = void $ NWS.get s ((makeUrl cp) ++ "/v1/agent/service/deregister/" ++ name) 
 
 registerCheck :: NWS.Session -> ConsulPath -> Register Check -> IO ()
-registerCheck s cp r@Register {..} = void $ NWS.putWith (makeOpts cp) s ((makeUrl cp) ++ "/v1/agent/check/register") $ encode r
-registerCheck s cp (DeRegister name) = void $ NWS.getWith (makeOpts cp) s ((makeUrl cp) ++ "/v1/agent/check/deregister/" ++ name) 
+registerCheck s cp r@Register {..} = void $ NWS.put s ((makeUrl cp) ++ "/v1/agent/check/register") $ encode r
+registerCheck s cp (DeRegister name) = void $ NWS.get s ((makeUrl cp) ++ "/v1/agent/check/deregister/" ++ name) 
 
 withService :: NWS.Session -> ConsulPath -> Register Service -> IO a -> IO a
 withService sess cp s@Register {..} io = 
@@ -67,6 +59,6 @@ kv s cp thing = do resp <- case thing of
                            PutKey key val -> NWS.putWith opts s (url' key) val
                            DelKey key -> NWS.deleteWith opts s (url' key) >>= return . fmap (const "")
                    return $ resp ^. responseBody <> "\n"
-    where opts     = makeOpts cp & param "raw" .~ [""]
+    where opts     = defaults & param "raw" .~ [""]
           url      = makeUrl cp
           url' key = url ++ "/v1/kv/" ++ key

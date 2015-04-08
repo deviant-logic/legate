@@ -8,6 +8,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import           Data.Monoid
 import           Network.Consul.Http
 import           Network.Consul.Types
+import qualified Network.HTTP.Client as HTTP
 import           Network.Wreq.Session
 import           Options.Applicative
 import           System.Environment (withArgs)
@@ -27,8 +28,12 @@ commands = mconcat [execCommand exec,
                     kvCommand kvcmd,
                     helpCommand helpcmd]
 
+makeManagerSettings :: ConsulPath -> HTTP.ManagerSettings
+makeManagerSettings (UnixPath p) = HTTP.defaultManagerSettings { HTTP.managerRawConnection = return $ \_ _ _ -> makeUnixSocketConnection p 4096 }
+makeManagerSettings _            = HTTP.defaultManagerSettings
+
 withServiceCommand :: ConsulPath -> Register Service -> FilePath -> [String] -> IO ()
-withServiceCommand url svc cmd args = withSession $ \s -> withService s url svc $ callProcess cmd args
+withServiceCommand url svc cmd args = withSessionWith (makeManagerSettings url) $ \s -> withService s url svc $ callProcess cmd args
 
 helpcmd :: String -> IO ()
 helpcmd cmd = withArgs [cmd, "--help"] main
@@ -38,10 +43,17 @@ exec CommandOpts {..} = withServiceCommand (consulPath _globalOpts) svc cmd args
   where (Exec svc cmd args) = _commandOpts
 
 register :: CommandOpts (Register Service) -> IO ()
-register CommandOpts {..} = withSession $ \s -> registerService s (consulPath _globalOpts) _commandOpts
+register CommandOpts {..} = withSessionWith (makeManagerSettings url) $ \s -> registerService s url _commandOpts
+  where
+    url = consulPath _globalOpts
 
 check :: CommandOpts (Register Check) -> IO ()
-check CommandOpts {..} = withSession $ \s -> registerCheck s (consulPath _globalOpts) _commandOpts
+check CommandOpts {..} = withSessionWith (makeManagerSettings url) $ \s -> registerCheck s url _commandOpts
+  where
+    url = consulPath _globalOpts
+
 
 kvcmd :: CommandOpts KV -> IO ()
-kvcmd CommandOpts {..} = BL.putStr =<< (withSession $ \s -> kv s (consulPath _globalOpts) _commandOpts)
+kvcmd CommandOpts {..} = BL.putStr =<< (withSessionWith (makeManagerSettings url) $ \s -> kv s url _commandOpts)
+  where
+    url = consulPath _globalOpts
