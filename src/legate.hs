@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -10,14 +11,16 @@ import           Network.Consul.Http
 import           Network.Consul.Types
 import           Options.Applicative
 import           System.Environment (withArgs)
-import           System.Process
+import           System.Posix.Process
 import           System.Posix.Signals
+import           System.Process
 
 import           Legate.Options
 
 main :: IO ()
 main = do
-    installHandler sigTERM (CatchInfo $ error . show . siginfoSignal) Nothing
+    pgid <- getProcessGroupID
+    installHandler sigTERM (Catch $ putStrLn "Caugh SIGTERM. Raising SIGINT" >> signalProcessGroup sigINT pgid) Nothing
     join $ execParser (info (helper <*> subparser commands)
                           (fullDesc <> progDesc "interact with consul") )
           
