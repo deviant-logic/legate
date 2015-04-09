@@ -21,8 +21,6 @@ import qualified Network.Socket.ByteString as NBS
 import           Network.Wreq
 import qualified Network.Wreq.Session as NWS
 
-import Debug.Trace
-
 makeUnixSocketConnection :: String -> Int -> IO Connection
 makeUnixSocketConnection path chunkSize = bracketOnError
     (socket AF_UNIX Stream 0)
@@ -37,7 +35,7 @@ makeUnixSocketConnection path chunkSize = bracketOnError
 makeUrl :: ConsulPath -> String
 makeUrl (HttpPath p)  = "http://" ++ p
 makeUrl (HttpsPath p) = "https://" ++ p
-makeUrl (UnixPath _)  = ""
+makeUrl (UnixPath _)  = "http://localhost:0"
 
 registerService :: NWS.Session -> ConsulPath -> Register Service -> IO ()
 registerService s cp r@Register {..} = void $ NWS.put s ((makeUrl cp) ++ "/v1/agent/service/register") $ encode r
