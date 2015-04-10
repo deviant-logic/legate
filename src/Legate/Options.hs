@@ -21,26 +21,30 @@ commandOptsParser pa = CommandOpts <$> globalOptsParser <*> pa
 data GlobalOpts = GlobalOpts {
   _consulHost :: String,
   _consulPort :: Int,
-  _consulSSL  :: Bool
+  _consulSSL  :: Bool,
+  _unixSocket :: Maybe FilePath
 }
 
 defaultOpts :: GlobalOpts
-defaultOpts = GlobalOpts "localhost" 8500 False
+defaultOpts = GlobalOpts "localhost" 8500 False Nothing
 
 globalOptsParser :: Parser GlobalOpts
-globalOptsParser = GlobalOpts <$> strOption host <*> option auto port <*> switch ssl
+globalOptsParser = GlobalOpts <$> strOption host <*> option auto port <*> switch ssl <*> optional (strOption socket)
   where GlobalOpts {..} = defaultOpts
         host = long "consul-host" <> short 'H' <> value _consulHost <> showDefault
                <> help "host running consul" <> metavar "HOST"
         port = long "consul-port" <> short 'P' <> value _consulPort <> showDefault
                <> help "consul HTTP API port on HOST" <> metavar "PORT"
         ssl  = long "ssl" <> showDefault <> help "use https"
+        socket = long "unix-socket" <> short 'U'
+                 <> help "consul HTTP API unix socket" <> metavar "SOCKET"
 
-consulPath :: GlobalOpts -> String
-consulPath (GlobalOpts host port ssl) = scheme ++ host ++ ":" ++ show port
-  where scheme | ssl       = "https://"
-               | otherwise = "http://"
-
+consulPath :: GlobalOpts -> ConsulPath
+consulPath (GlobalOpts host port ssl socket) = case socket of
+    (Just path) -> UnixPath path
+    Nothing     -> scheme $ host ++ ":" ++ show port
+  where scheme | ssl       = HttpsPath
+               | otherwise = HttpPath
 
 fstr :: IsString a => ReadM a
 fstr = fromString <$> str

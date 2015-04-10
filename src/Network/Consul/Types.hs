@@ -12,6 +12,8 @@ import Data.Maybe
 import Data.Text (Text)
 import Network.Consul.Util
 
+data ConsulPath = HttpPath String | HttpsPath String | UnixPath String
+
 data Service = Service {
       _svcTags :: [Text],
       _svcPort :: Int,
