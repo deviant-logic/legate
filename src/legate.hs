@@ -12,12 +12,17 @@ import qualified Network.HTTP.Client as HTTP
 import           Network.Wreq.Session
 import           Options.Applicative
 import           System.Environment (withArgs)
+import           System.Posix.Process
+import           System.Posix.Signals
 import           System.Process
 
 import           Legate.Options
 
 main :: IO ()
-main = join $ execParser (info (helper <*> subparser commands)
+main = do
+    pgid <- getProcessGroupID
+    installHandler sigTERM (Catch $ putStrLn "Caugh SIGTERM. Raising SIGINT" >> signalProcessGroup sigINT pgid) Nothing
+    join $ execParser (info (helper <*> subparser commands)
                           (fullDesc <> progDesc "interact with consul") )
           
 
